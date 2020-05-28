@@ -1,3 +1,5 @@
+import { GraphQLClient } from 'graphql-request';
+import { print } from 'graphql';
 import gql from 'graphql-tag';
 export type Maybe<T> = T | null;
 /** All built-in and custom scalars, mapped to their actual values */
@@ -3135,17 +3137,33 @@ export type LookupPlayerForGameQueryVariables = {
 export type LookupPlayerForGameQuery = { players: Array<Pick<Players, 'id'>> };
 
 
-export const InsertPlayerForGame = gql`
+export const InsertPlayerForGameDocument = gql`
     mutation InsertPlayerForGame($gameId: uuid!, $clientUuid: uuid!) {
   insert_players_one(object: {game_id: $gameId, client_uuid: $clientUuid}) {
     id
   }
 }
     `;
-export const LookupPlayerForGame = gql`
+export const LookupPlayerForGameDocument = gql`
     query LookupPlayerForGame($gameId: uuid!, $clientUuid: uuid!) {
   players(where: {game_id: {_eq: $gameId}, client_uuid: {_eq: $clientUuid}}) {
     id
   }
 }
     `;
+
+export type SdkFunctionWrapper = <T>(action: () => Promise<T>) => Promise<T>;
+
+
+const defaultWrapper: SdkFunctionWrapper = sdkFunction => sdkFunction();
+export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
+  return {
+    InsertPlayerForGame(variables: InsertPlayerForGameMutationVariables): Promise<InsertPlayerForGameMutation> {
+      return withWrapper(() => client.request<InsertPlayerForGameMutation>(print(InsertPlayerForGameDocument), variables));
+    },
+    LookupPlayerForGame(variables: LookupPlayerForGameQueryVariables): Promise<LookupPlayerForGameQuery> {
+      return withWrapper(() => client.request<LookupPlayerForGameQuery>(print(LookupPlayerForGameDocument), variables));
+    }
+  };
+}
+export type Sdk = ReturnType<typeof getSdk>;
